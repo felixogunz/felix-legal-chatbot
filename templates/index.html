@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta
+        name="description"
+        content="Felix Legal Chatbot — AI-powered Nigerian legal research, case analysis and document assistance."
+    >
+
+    <meta name="theme-color" content="#f5f8fc">
+
+    <title>Felix Legal Chatbot | Legal Workspace</title>
+
+    <!-- Main application stylesheet -->
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='style.css') }}"
+    >
+
+    <!-- Markdown formatting library -->
+    <script
+        src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"
+        defer
+    ></script>
+
+    <!-- Sanitises HTML generated from Markdown -->
+    <script
+        src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"
+        defer
+    ></script>
+
+    <!-- Main application JavaScript: load only once -->
+    <script
+        src="{{ url_for('static', filename='script.js') }}"
+        defer
+    ></script>
+</head>
+
+<body>
+    <div class="app-shell">
+
+        <!-- LEFT NAVIGATION -->
+        <aside
+            class="navigation-panel"
+            id="navigationPanel"
+            aria-label="Main navigation"
+        >
+
+            <div class="brand-area">
+                <div class="brand-mark" aria-hidden="true">FL</div>
+
+                <div class="brand-text">
+                    <h1>Felix</h1>
+                    <span>Legal Chatbot</span>
+                </div>
+            </div>
+
+            <button
+                class="new-research-button"
+                id="newResearchButton"
+                type="button"
+            >
+                <span class="button-icon" aria-hidden="true">+</span>
+                <span>New Research</span>
+            </button>
+
+            <nav class="main-navigation" aria-label="Workspace tools">
+                <p class="navigation-label">Workspace</p>
+
+                <button
+                    class="navigation-item active"
+                    data-tool="chat"
+                    type="button"
+                    aria-current="page"
+                >
+                    <span class="navigation-icon" aria-hidden="true">◇</span>
+                    <span>Legal Assistant</span>
+                </button>
+
+                <button
+                    class="navigation-item"
+                    data-tool="research"
+                    type="button"
+                >
+                    <span class="navigation-icon" aria-hidden="true">⌕</span>
+                    <span>Legal Research</span>
+                </button>
+
+                <button
+                    class="navigation-item"
+                    data-tool="case-analysis"
+                    type="button"
+                >
+                    <span class="navigation-icon" aria-hidden="true">§</span>
+                    <span>Case Analysis</span>
+                </button>
+
+                <button
+                    class="navigation-item"
+                    data-tool="drafting"
+                    type="button"
+                >
+                    <span class="navigation-icon" aria-hidden="true">✎</span>
+                    <span>Legal Drafting</span>
+                </button>
+
+                <button
+                    class="navigation-item"
+                    data-tool="authorities"
+                    type="button"
+                >
+                    <span class="navigation-icon" aria-hidden="true">◉</span>
+                    <span>Authorities</span>
+                </button>
+            </nav>
+
+            <div class="recent-section">
+                <p class="navigation-label">Recent Research</p>
+
+                <div class="recentResearch">
+                    <button class="recent-item" type="button">
+                        Supreme Court Jurisdiction
+                    </button>
+
+                    <button class="recent-item" type="button">
+                        Service of Originating Process
+                    </button>
+
+                    <button class="recent-item" type="button">
+                        Lagos State Civil Procedure Rules 2019
+                    </button>
+                </div>
+            </div>
+
+            <div class="navigation-footer">
+                <button
+                    class="footer-action"
+                    id="settingsButton"
+                    type="button"
+                >
+                    <span aria-hidden="true">⚙</span>
+                    <span>Settings</span>
+                </button>
+
+                <button
+                    class="footer-action"
+                    id="profileButton"
+                    type="button"
+                >
+                    <span aria-hidden="true">F</span>
+                    <span>Felix</span>
+                </button>
+            </div>
+
+        </aside>
+
+        <!-- MAIN APPLICATION -->
+        <main class="main-area">
+
+            <!-- TOP BAR -->
+            <header class="top-bar">
+                <div class="top-left">
+
+                    <button
+                        class="mobile-menu-button"
+                        id="mobileMenuButton"
+                        type="button"
+                        aria-label="Open navigation"
+                        aria-controls="navigationPanel"
+                        aria-expanded="false"
+                    >
+                        <span aria-hidden="true">☰</span>
+                    </button>
+
+                    <div class="workspace-heading">
+                        <span class="workspace-title">
+                            Legal Workspace
+                        </span>
+
+                        <span
+                            class="workspace-status"
+                            id="workspaceStatus"
+                            role="status"
+                            aria-live="polite"
+                        >
+                            Ready
+                        </span>
+                    </div>
+
+                </div>
+
+                <div class="top-actions">
+                    <button
+                        class="top-action"
+                        id="themeButton"
+                        type="button"
+                        aria-label="Change theme"
+                        title="Change appearance"
+                    >
+                        <span aria-hidden="true">◐</span>
+                    </button>
+
+                    <button
+                        class="top-action"
+                        id="helpButton"
+                        type="button"
+                        aria-label="Help"
+                        title="Help"
+                    >
+                        <span aria-hidden="true">?</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- WORKSPACE CONTENT -->
+            <section
+                class="workspace"
+                aria-label="Legal assistant workspace"
+            >
+
+                <!-- WELCOME VIEW -->
+                <div
+                    class="welcome-view"
+                    id="welcomeView"
+                >
+
+                    <div class="welcome-content">
+
+                        <div class="welcome-badge">
+                            <span
+                                class="status-dot"
+                                aria-hidden="true"
+                            ></span>
+                            Nigerian Legal AI Workspace
+                        </div>
+
+                        <h2>
+                            Legal work,
+                            <span>thought through.</span>
+                        </h2>
+
+                        <p class="welcome-description">
+                            Research authorities, analyse cases,
+                            review documents and develop legal drafts
+                            from one intelligent workspace.
+                        </p>
+
+                        <div class="quick-tools">
+
+                            <button
+                                class="tool-card"
+                                data-tool="research"
+                                type="button"
+                            >
+                                <div
+                                    class="tool-icon blue"
+                                    aria-hidden="true"
+                                >
+                                    ⌕
+                                </div>
+
+                                <div>
+                                    <h3>Research</h3>
+                                    <p>
+                                        Explore legal principles
+                                        and authorities.
+                                    </p>
+                                </div>
+                            </button>
+
+                            <button
+                                class="tool-card"
+                                data-tool="case-analysis"
+                                type="button"
+                            >
+                                <div
+                                    class="tool-icon navy"
+                                    aria-hidden="true"
+                                >
+                                    §
+                                </div>
+
+                                <div>
+                                    <h3>Analyse a Case</h3>
+                                    <p>
+                                        Break down judgments,
+                                        issues and reasoning.
+                                    </p>
+                                </div>
+                            </button>
+
+                            <button
+                                class="tool-card"
+                                data-tool="drafting"
+                                type="button"
+                            >
+                                <div
+                                    class="tool-icon sky"
+                                    aria-hidden="true"
+                                >
+                                    ✎
+                                </div>
+
+                                <div>
+                                    <h3>Draft</h3>
+                                    <p>
+                                        Develop structured legal documents.
+                                    </p>
+                                </div>
+                            </button>
+
+                            <button
+                                class="tool-card"
+                                data-tool="documents"
+                                type="button"
+                            >
+                                <div
+                                    class="tool-icon steel"
+                                    aria-hidden="true"
+                                >
+                                    □
+                                </div>
+
+                                <div>
+                                    <h3>Review Document</h3>
+                                    <p>
+                                        Upload and examine
+                                        legal documents.
+                                    </p>
+                                </div>
+                            </button>
+
+                        </div>
+
+                        <div class="research-note">
+                            <div
+                                class="note-mark"
+                                aria-hidden="true"
+                            >
+                                i
+                            </div>
+
+                            <p>
+                                Felix Legal Chatbot assists with
+                                legal research and analysis.
+                                Verify legislation, judicial
+                                authorities and citations before
+                                relying on them professionally.
+                            </p>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- CHAT VIEW -->
+                <div
+                    class="chat-view hidden"
+                    id="chatView"
+                >
+
+                    <div
+                        class="conversation-header"
+                        id="conversationHeader"
+                    >
+
+                        <div>
+                            <span class="conversation-type">
+                                LEGAL ASSISTANT
+                            </span>
+
+                            <h2 id="conversationTitle">
+                                New Legal Research
+                            </h2>
+                        </div>
+
+                        <button
+                            class="conversation-menu"
+                            id="conversationmenu"
+                            type="button"
+                            aria-label="Conversation options"
+                            title="Conversation options"
+                        >
+                            <span aria-hidden="true">•••</span>
+                        </button>
+
+                    </div>
+
+                    <!-- Messages are inserted by script.js -->
+                    <div
+                        class="messages-area"
+                        id="messagesArea"
+                        aria-label="Conversation messages"
+                        aria-live="polite"
+                        aria-relevant="additions"
+                    ></div>
+
+                    <!-- MESSAGE COMPOSER -->
+                    <div class="composer-area">
+
+                        <div
+                            class="attachment-preview hidden"
+                            id="attachmentPreview"
+                            aria-live="polite"
+                        ></div>
+
+                        <div class="composer">
+
+                            <button
+                                class="composer-button"
+                                id="uploadButton"
+                                type="button"
+                                aria-label="Upload document"
+                                title="Upload a legal document"
+                            >
+                                <span aria-hidden="true">+</span>
+                            </button>
+
+                            <textarea
+                                id="messageInput"
+                                name="message"
+                                placeholder="Ask Felix about a legal issue..."
+                                rows="1"
+                                aria-label="Enter your legal question"
+                                autocomplete="off"
+                            ></textarea>
+
+                            <button
+                                class="send-button"
+                                id="sendButton"
+                                type="button"
+                                aria-label="Send message"
+                                title="Send message"
+                            >
+                                <span aria-hidden="true">↑</span>
+                            </button>
+
+                        </div>
+
+                        <div class="composer-footer">
+                            <span>Felix Legal AI</span>
+
+                            <span>
+                                Verify authorities before professional reliance.
+                            </span>
+                        </div>
+
+                    </div>
+                </div>
+
+            </section>
+
+        </main>
+
+    </div>
+
+    <!-- DOCUMENT UPLOAD INPUT -->
+    <input
+        type="file"
+        id="fileInput"
+        name="file"
+        accept=".pdf,.doc,.docx,.txt"
+        hidden
+        aria-label="Choose a legal document to upload"
+    >
+
+</body>
+</html>
+
