@@ -16,6 +16,7 @@ from database import (
     get_conversation,
     rename_conversation,
     delete_conversation,
+    execute_query,
 )
 
 from utils import create_conversation_title
@@ -297,7 +298,8 @@ def chat():
             connection = get_connection()
 
             try:
-                conversation = connection.execute(
+                conversation = execute_query(
+                    connection,
                     """
                     SELECT id
                     FROM conversations
