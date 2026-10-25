@@ -488,6 +488,7 @@ def inject_csrf_token():
     return {"csrf_token": generate_csrf}
 
 
+
 @app.route("/register", methods=["GET", "POST"])
 @limiter.limit("5 per minute")
 def register():
@@ -528,7 +529,6 @@ def register():
                     password_hash = generate_password_hash(password)
                     user_id = create_user(email, password_hash)
 
-                    # Start a fresh session after successful registration.
                     session.clear()
                     session["user_id"] = str(user_id)
                     session.permanent = True
@@ -542,6 +542,7 @@ def register():
                     "Please try again."
                 )
 
+    # Render the registration page for both GET and POST requests.
     return render_template("register.html", error=error)
 
 
@@ -554,6 +555,7 @@ def login():
             return redirect(url_for("index"))
 
     error = None
+    success = request.args.get("reset") == "success"
 
     if request.method == "POST":
         email = request.form.get("email", "").strip().lower()
@@ -573,11 +575,9 @@ def login():
                         password,
                     )
                 ):
-                    # Use the same message for unknown email and bad password.
                     error = "Invalid email address or password."
 
                 else:
-                    # Prevent session fixation after authentication.
                     session.clear()
                     session["user_id"] = str(user["id"])
                     session.permanent = True
@@ -588,12 +588,12 @@ def login():
                 logger.exception("Login failed.")
                 error = "We could not sign you in. Please try again."
 
-
-        return render_template(
-            "login.html",
-            error=error,
-            success=request.args.get("reset") == "success",
-        )
+    # IMPORTANT: This must be outside the POST condition.
+    return render_template(
+        "login.html",
+        error=error,
+        success=success,
+    )
 
 
 # Felix Legal Chatbot
