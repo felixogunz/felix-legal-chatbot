@@ -888,17 +888,23 @@ def handle_service_unavailable(error):
 
 @app.errorhandler(CSRFError)
 def handle_csrf_error(error):
-    if request.path.startswith("/api/"):
-        return json_error(
-            "Your security token is missing or expired. Refresh the page and try again.",
-            400,
-        )
-
-    return (
-        "Your security token is missing or expired. "
-        "Refresh the page and try again.",
-        400,
+    # Log the actual validation failure without logging the submitted token.
+    logger.warning(
+        "CSRF validation failed: path=%s reason=%s",
+        request.path,
+        error.description,
     )
+
+    message = (
+        "Your security token is missing or expired. "
+        "Refresh the page and try again."
+    )
+
+    if request.path.startswith("/api/"):
+        return json_error(message, 400)
+
+    return message, 400
+
 
 
 
