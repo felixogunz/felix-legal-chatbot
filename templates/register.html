@@ -4,153 +4,265 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="theme-color" content="#071a33">
+
     <title>Create Account | Felix Legal Chatbot</title>
 
     <style>
-        /* Felix Legal Chatbot */
+        /* Felix Legal Chatbot Authentication */
+
         :root {
-            color-scheme: dark;
-            font-family: Inter, system-ui, sans-serif;
-            background: #0b0e0d;
-            color: #f1f5f2;
+            color-scheme: light;
+
+            --blue-950: #071a33;
+            --blue-900: #0b2447;
+            --blue-800: #103765;
+            --blue-700: #1557a6;
+            --blue-600: #1976d2;
+            --blue-500: #2d8cff;
+            --blue-100: #e9f3ff;
+            --blue-50: #f3f8ff;
+
+            --background: #f5f7fa;
+            --surface: #ffffff;
+            --text-main: #172033;
+            --text-secondary: #667085;
+            --text-light: #98a2b3;
+            --border: #e5e9f0;
         }
 
         * {
             box-sizing: border-box;
         }
 
+        html {
+            min-height: 100%;
+            scroll-behavior: smooth;
+        }
+
         body {
             min-height: 100vh;
             margin: 0;
-            display: grid;
-            place-items: center;
-            padding: 24px;
+            padding: 28px 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system,
+                BlinkMacSystemFont, "Segoe UI", sans-serif;
             background:
-                radial-gradient(ellipse at top, #18352c 0%, transparent 55%),
-                #0b0e0d;
+                radial-gradient(
+                    circle at 12% 12%,
+                    rgba(45, 140, 255, 0.10),
+                    transparent 32%
+                ),
+                radial-gradient(
+                    circle at 88% 85%,
+                    rgba(25, 118, 210, 0.08),
+                    transparent 30%
+                ),
+                var(--background);
+            color: var(--text-main);
+        }
+
+        button,
+        input {
+            font: inherit;
+        }
+
+        a {
+            color: var(--blue-600);
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+
+        a:hover {
+            color: var(--blue-500);
+            text-decoration: underline;
+        }
+
+        /* Authentication layout */
+
+        .auth-container {
+            width: 100%;
+            max-width: 440px;
+            margin: auto;
         }
 
         .auth-card {
             width: 100%;
-            max-width: 440px;
             padding: 36px;
-            border: 1px solid #2c4238;
-            border-radius: 22px;
-            background: rgba(16, 24, 20, 0.96);
-            box-shadow: 0 24px 80px #0008;
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            background: var(--surface);
+            box-shadow: 0 20px 60px rgba(15, 35, 65, 0.09);
+            animation: auth-appear 0.55s ease both;
         }
 
-        .brand {
-            color: #8ce4b3;
-            font-size: 13px;
+        @keyframes auth-appear {
+            from {
+                opacity: 0;
+                transform: translateY(14px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Brand */
+
+        .auth-brand {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 28px;
+        }
+
+        .auth-brand-mark {
+            width: 46px;
+            height: 46px;
+            flex: 0 0 46px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 13px;
+            background: linear-gradient(
+                135deg,
+                var(--blue-700),
+                var(--blue-500)
+            );
+            color: #ffffff;
+            font-size: 19px;
             font-weight: 800;
-            letter-spacing: 2px;
-            text-transform: uppercase;
+            letter-spacing: -1px;
+            box-shadow: 0 7px 18px rgba(25, 118, 210, 0.22);
         }
 
-        h1 {
-            margin: 18px 0 8px;
-            font-size: clamp(28px, 5vw, 36px);
+        .auth-brand-name {
+            color: var(--blue-950);
+            font-size: 16px;
+            font-weight: 750;
+            letter-spacing: -0.4px;
+        }
+
+        .auth-brand-caption {
+            display: block;
+            margin-top: 3px;
+            color: var(--text-secondary);
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        /* Headings */
+
+        .auth-card h1 {
+            margin: 0;
+            color: var(--blue-950);
+            font-size: clamp(27px, 5vw, 34px);
+            font-weight: 750;
+            letter-spacing: -1px;
+            line-height: 1.2;
         }
 
         .intro {
-            margin-bottom: 26px;
-            color: #a8b9ae;
-            line-height: 1.6;
+            margin: 11px 0 26px;
+            color: var(--text-secondary);
+            font-size: 13px;
+            line-height: 1.75;
         }
 
-        label {
+        /* Form fields */
+
+        .form-group {
+            margin-bottom: 19px;
+        }
+
+        .form-group label {
             display: block;
-            margin: 18px 0 8px;
-            font-size: 14px;
-            font-weight: 600;
+            margin: 0 0 8px;
+            color: var(--blue-950);
+            font-size: 12px;
+            font-weight: 650;
         }
 
-        input {
-            display: block;
-            width: 100%;
-            padding: 13px 14px;
-            border: 1px solid #35493e;
-            border-radius: 10px;
-            background: #0c130f;
-            color: #fff;
-            font: inherit;
-        }
-
-        input:focus {
-            outline: 2px solid #8ce4b3;
-            outline-offset: 2px;
-        }
-
-        /* Form buttons */
-        .auth-submit {
+        .form-group input {
             display: block;
             width: 100%;
-            margin-top: 24px;
-            padding: 14px;
-            border: 0;
+            min-height: 47px;
+            padding: 12px 14px;
+            border: 1px solid #d5deea;
             border-radius: 10px;
-            background: #8ce4b3;
-            color: #102219;
-            font: inherit;
-            font-weight: 800;
-            cursor: pointer;
+            outline: none;
+            background: #ffffff;
+            color: var(--text-main);
+            font-size: 13px;
+            transition:
+                border-color 0.2s ease,
+                box-shadow 0.2s ease;
         }
 
-        .auth-submit:hover {
-            background: #aaf0c9;
+        .form-group input::placeholder {
+            color: var(--text-light);
         }
 
-        /* Password visibility control */
+        .form-group input:hover {
+            border-color: #a8c8ed;
+        }
+
+        .form-group input:focus {
+            border-color: var(--blue-500);
+            box-shadow: 0 0 0 4px rgba(45, 140, 255, 0.12);
+        }
+
+        /* Password visibility */
+
         .password-wrapper {
             position: relative;
             width: 100%;
         }
 
         .password-wrapper input {
-            width: 100%;
             padding-right: 48px;
         }
 
         .password-wrapper .toggle-password {
             position: absolute;
             top: 50%;
-            right: 10px;
-            transform: translateY(-50%);
-
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-
+            right: 9px;
             width: 30px;
             min-width: 30px;
             height: 30px;
             margin: 0;
-            padding: 6px;
-
+            padding: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transform: translateY(-50%);
             border: 0;
-            border-radius: 6px;
+            border-radius: 7px;
             background: transparent;
-            color: #8ce4b3;
-
+            color: var(--blue-600);
             line-height: 1;
             cursor: pointer;
             appearance: none;
             -webkit-appearance: none;
+            transition:
+                background 0.2s ease,
+                color 0.2s ease;
         }
 
         .password-wrapper .toggle-password:hover {
-            background: rgba(140, 228, 179, 0.10);
-            color: #b4f5d0;
+            background: var(--blue-50);
+            color: var(--blue-800);
         }
 
         .password-wrapper .toggle-password svg {
             display: block;
             width: 18px;
             height: 18px;
-            min-width: 18px;
             flex: 0 0 18px;
-
             fill: none;
             stroke: currentColor;
             stroke-width: 1.7;
@@ -159,146 +271,248 @@
         }
 
         .password-wrapper .toggle-password:focus-visible {
-            outline: 2px solid #8ce4b3;
+            outline: 2px solid var(--blue-500);
             outline-offset: 2px;
         }
 
-        .error {
-            padding: 12px;
-            border: 1px solid #8e4545;
+        /* Submit button */
+
+        .auth-submit {
+            width: 100%;
+            min-height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 7px;
+            padding: 13px 18px;
+            border: 0;
             border-radius: 10px;
-            background: #351c1c;
-            color: #ffc3c3;
-            line-height: 1.5;
+            background: linear-gradient(
+                135deg,
+                var(--blue-700),
+                var(--blue-600)
+            );
+            color: #ffffff;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 7px 16px rgba(25, 118, 210, 0.18);
+            transition:
+                transform 0.2s ease,
+                box-shadow 0.2s ease,
+                background 0.2s ease;
         }
 
-        .footer {
-            margin: 22px 0 0;
-            color: #a8b9ae;
-            font-size: 14px;
-            text-align: center;
+        .auth-submit:hover {
+            background: linear-gradient(
+                135deg,
+                var(--blue-600),
+                var(--blue-500)
+            );
+            box-shadow: 0 10px 23px rgba(25, 118, 210, 0.25);
+            transform: translateY(-1px);
         }
 
-        a {
-            color: #8ce4b3;
+        .auth-submit:active {
+            transform: translateY(0);
         }
 
-        .fine-print {
-            margin-top: 18px;
-            color: #87988d;
+        .auth-submit:focus-visible {
+            outline: 3px solid rgba(45, 140, 255, 0.35);
+            outline-offset: 3px;
+        }
+
+        /* Feedback messages */
+
+        .error {
+            margin-bottom: 20px;
+            padding: 12px 14px;
+            border: 1px solid #fecaca;
+            border-radius: 10px;
+            background: #fff7f7;
+            color: #991b1b;
             font-size: 12px;
             line-height: 1.6;
         }
 
+        /* Footer */
+
+        .footer {
+            margin: 23px 0 0;
+            color: var(--text-secondary);
+            font-size: 12px;
+            line-height: 1.7;
+            text-align: center;
+        }
+
+        .footer a {
+            font-weight: 700;
+        }
+
+        .fine-print {
+            margin-top: 20px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border);
+            color: var(--text-light);
+            font-size: 11px;
+            line-height: 1.7;
+        }
+
+        /* Responsive layout */
+
         @media (max-width: 480px) {
+            body {
+                padding: 18px 12px;
+            }
+
             .auth-card {
-                padding: 26px 22px;
+                padding: 28px 22px;
+                border-radius: 16px;
+            }
+
+            .auth-card h1 {
+                font-size: 27px;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *,
+            *::before,
+            *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
             }
         }
     </style>
 </head>
 
 <body>
-    <main class="auth-card">
-        <div class="brand">Felix Legal Chatbot</div>
+    <main class="auth-container">
+        <section class="auth-card">
+            <div class="auth-brand">
+                <div class="auth-brand-mark" aria-hidden="true">F</div>
 
-        <h1>Create your account</h1>
-
-        <p class="intro">
-            Create a secure account to access your legal research
-            assistant and conversation history.
-        </p>
-
-        {% if error %}
-            <div class="error" role="alert">{{ error }}</div>
-        {% endif %}
-
-        <form method="POST" action="{{ url_for('register') }}">
-            <input
-                type="hidden"
-                name="csrf_token"
-                value="{{ csrf_token() }}"
-            >
-
-            <label for="email">Email address</label>
-            <input
-                id="email"
-                name="email"
-                type="email"
-                autocomplete="email"
-                maxlength="254"
-                required
-            >
-
-            <label for="password">Password</label>
-
-            <div class="password-wrapper">
-                <input
-                    id="password"
-                    name="password"
-                    type="password"
-                    autocomplete="new-password"
-                    minlength="12"
-                    maxlength="128"
-                    required
-                >
-
-                <button
-                    type="button"
-                    class="toggle-password"
-                    aria-label="Show password"
-                    aria-controls="password"
-                    aria-pressed="false"
-                >
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"></path>
-                        <circle cx="12" cy="12" r="3"></circle>
-                    </svg>
-                </button>
+                <div>
+                    <div class="auth-brand-name">Felix Legal Chatbot</div>
+                    <span class="auth-brand-caption">
+                        AI-powered legal assistance
+                    </span>
+                </div>
             </div>
 
-            <label for="confirm_password">Confirm password</label>
+            <h1>Create your account</h1>
 
-            <div class="password-wrapper">
+            <p class="intro">
+                Create a secure account to access your legal research
+                assistant and conversation history.
+            </p>
+
+            {% if error %}
+                <div class="error" role="alert">{{ error }}</div>
+            {% endif %}
+
+            <form method="POST" action="{{ url_for('register') }}">
                 <input
-                    id="confirm_password"
-                    name="confirm_password"
-                    type="password"
-                    autocomplete="new-password"
-                    minlength="12"
-                    maxlength="128"
-                    required
+                    type="hidden"
+                    name="csrf_token"
+                    value="{{ csrf_token() }}"
                 >
 
-                <button
-                    type="button"
-                    class="toggle-password"
-                    aria-label="Show password"
-                    aria-controls="confirm_password"
-                    aria-pressed="false"
-                >
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"></path>
-                        <circle cx="12" cy="12" r="3"></circle>
-                    </svg>
+                <div class="form-group">
+                    <label for="email">Email address</label>
+                    <input
+                        id="email"
+                        name="email"
+                        type="email"
+                        autocomplete="email"
+                        maxlength="254"
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+
+                    <div class="password-wrapper">
+                        <input
+                            id="password"
+                            name="password"
+                            type="password"
+                            autocomplete="new-password"
+                            minlength="12"
+                            maxlength="128"
+                            required
+                        >
+
+                        <button
+                            type="button"
+                            class="toggle-password"
+                            aria-label="Show password"
+                            aria-controls="password"
+                            aria-pressed="false"
+                        >
+                            <svg
+                                viewBox="0 0 24 24"
+                                aria-hidden="true"
+                                focusable="false"
+                            >
+                                <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"></path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="confirm_password">Confirm password</label>
+
+                    <div class="password-wrapper">
+                        <input
+                            id="confirm_password"
+                            name="confirm_password"
+                            type="password"
+                            autocomplete="new-password"
+                            minlength="12"
+                            maxlength="128"
+                            required
+                        >
+
+                        <button
+                            type="button"
+                            class="toggle-password"
+                            aria-label="Show password"
+                            aria-controls="confirm_password"
+                            aria-pressed="false"
+                        >
+                            <svg
+                                viewBox="0 0 24 24"
+                                aria-hidden="true"
+                                focusable="false"
+                            >
+                                <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"></path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <button type="submit" class="auth-submit">
+                    Create account
                 </button>
-            </div>
+            </form>
 
-            <button type="submit" class="auth-submit">
-                Create account
-            </button>
-        </form>
+            <p class="footer">
+                Already registered?
+                <a href="{{ url_for('login') }}">Sign in</a>
+            </p>
 
-        <p class="footer">
-            Already registered?
-            <a href="{{ url_for('login') }}">Sign in</a>
-        </p>
-
-        <p class="fine-print">
-            Use a strong, unique password. Do not enter confidential
-            information into legal research tools unless you understand
-            how the service processes and stores it.
-        </p>
+            <p class="fine-print">
+                Use a strong, unique password. Do not enter confidential
+                information into legal research tools unless you understand
+                how the service processes and stores it.
+            </p>
+        </section>
     </main>
 
     <script
