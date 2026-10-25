@@ -3,14 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <meta
         name="description"
         content="Felix Legal Chatbot — AI-powered Nigerian legal research, case analysis and document assistance."
     >
-
     <meta name="theme-color" content="#f5f8fc">
-
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Felix Legal Chatbot | Legal Workspace</title>
 
     <!-- Main application stylesheet -->
@@ -213,6 +211,79 @@
                     </button>
                 </div>
             </header>
+
+
+            {% if guest_messages_remaining is defined and guest_messages_remaining is not none %}
+            <div
+                class="guest-access-banner"
+                id="guestAccessBanner"
+                data-messages-remaining="{{ guest_messages_remaining }}"
+                data-expires-at="{{ guest_expires_at if guest_expires_at is defined else '' }}"
+                data-limited="{{ 'true' if guest_access_limited else 'false' }}"
+                role="status"
+                aria-live="polite"
+            >
+                <div class="guest-access-copy">
+                    <strong id="guestAccessTitle">Guest access</strong>
+                    <span id="guestAccessMessage">
+                        You can try Felix Legal Chatbot without creating an account.
+                    </span>
+                </div>
+
+                <div class="guest-access-actions">
+                    <a href="{{ url_for('login') }}">Sign in</a>
+                    <a href="{{ url_for('register') }}">Create account</a>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Felix Legal Chatbot: guest access status -->
+            {% if guest_messages_remaining is not none %}
+            <div
+                id="guestAccessBanner"
+                class="guest-access-banner"
+                role="status"
+                aria-live="polite"
+                data-guest-access-limited="{{ 'true' if guest_access_limited else 'false' }}"
+                data-messages-remaining="{{ guest_messages_remaining }}"
+                data-expires-at="{{ guest_expires_at }}"
+            >
+                <div class="guest-access-information">
+                    <strong id="guestAccessTitle">
+                        {% if guest_access_limited %}
+                            Your guest access has ended
+                        {% else %}
+                            You're using Felix as a guest
+                        {% endif %}
+                    </strong>
+
+                    <p id="guestAccessMessage">
+                        {% if guest_access_limited %}
+                            Sign in or create an account to continue
+                            your legal research.
+                        {% else %}
+                            You have
+                            <span id="guestMessagesRemaining">{{ guest_messages_remaining }}</span>
+                            messages remaining in your guest allowance.
+                            Guest access lasts for 48 hours.
+                        {% endif %}
+                    </p>
+                </div>
+
+                <div class="guest-access-actions">
+                    <a href="{{ url_for('login') }}">
+                        Sign in
+                    </a>
+
+                    <a
+                        href="{{ url_for('register') }}"
+                        class="guest-register-link"
+                    >
+                        Create account
+                    </a>
+                </div>
+            </div>
+            {% endif %}
 
             <!-- WORKSPACE CONTENT -->
             <section

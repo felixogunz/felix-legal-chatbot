@@ -1,6 +1,5 @@
 "use strict";
 
-
 const welcomeView = document.getElementById("welcomeView");
 const chatView = document.getElementById("chatView");
 const messagesArea = document.getElementById("messagesArea");
@@ -17,6 +16,22 @@ const conversationTitle = document.getElementById("conversationTitle");
 const settingsButton = document.getElementById("settingsButton");
 const themeButton = document.getElementById("themeButton");
 const helpButton = document.getElementById("helpButton");
+const guestAccessBanner = document.getElementById("guestAccessBanner");
+const guestAccessTitle = document.getElementById("guestAccessTitle");
+const guestAccessMessage = document.getElementById("guestAccessMessage");
+const guestMessagesRemaining = document.getElementById("guestMessagesRemaining");
+
+let guestAccessLimited =
+    guestAccessBanner?.dataset.limited === "true";
+
+let guestMessagesCount = guestAccessBanner
+    ? Number.parseInt(guestAccessBanner.dataset.messagesRemaining, 10)
+    : null;
+
+let guestExpiresAt = guestAccessBanner
+    ? Number.parseInt(guestAccessBanner.dataset.expiresAt, 10)
+    : null;
+
 
 const conversationMenuButton =
     document.getElementById("conversationmenu") ||
@@ -53,12 +68,177 @@ conversationMenuButton?.setAttribute("aria-label", "Conversation options");
 
 
 
+/* Felix Legal Chatbot */
+
+function getCsrfToken() {
+    const token = document.querySelector(
+        'meta[name="csrf-token"]'
+    );
+
+    return token ? token.content : "";
+}
+
+async function secureFetch(url, options = {}) {
+    const headers = new Headers(options.headers || {});
+
+    headers.set("X-CSRFToken", getCsrfToken());
+
+    return fetch(url, {
+        ...options,
+        headers,
+        credentials: "same-origin",
+    });
+}
+
 // GENERAL HELPERS
 
 function setStatus(message) {
     if (workspaceStatus) {
         workspaceStatus.textContent = message;
     }
+}
+
+function setGuestAccessLimited(message) {
+    guestAccessLimited = true;
+
+    if (guestAccessBanner) {
+        guestAccessBanner.classList.add("is-limited");
+        guestAccessBanner.dataset.limited = "true";
+    }
+
+    if (guestAccessTitle) {
+        guestAccessTitle.textContent = "Guest access ended";
+    }
+
+    if (guestAccessMessage) {
+        guestAccessMessage.textContent =
+            message ||
+            "Sign in or create an account to continue your legal research.";
+    }
+
+    if (messageInput) {
+        messageInput.disabled = true;
+        messageInput.placeholder =
+            "Sign in or create an account to continue";
+    }
+
+    if (sendButton) {
+        sendButton.disabled = true;
+    }
+
+    if (uploadButton) {
+        uploadButton.disabled = true;
+    }
+
+    setStatus("Guest access ended — sign in to continue");
+}
+
+function updateGuestAccessDisplay() {
+    if (!guestAccessBanner || guestAccessLimited) {
+        return;
+    }
+
+    const now = Math.floor(Date.now() / 1000);
+
+    if (
+        Number.isFinite(guestExpiresAt) &&
+        guestExpiresAt > 0 &&
+        now >= guestExpiresAt
+    ) {
+        setGuestAccessLimited(
+            "Your 48-hour guest period has ended. Sign in or create an account to continue."
+        );
+        return;
+    }
+
+    if (!Number.isFinite(guestMessagesCount)) {
+        return;
+    }
+
+    if (guestMessagesCount <= 0) {
+        setGuestAccessLimited(
+            "You've used all 30 guest messages. Sign in or create an account to continue."
+        );
+        return;
+    }
+
+    guestAccessBanner.dataset.messagesRemaining =
+        String(guestMessagesCount);
+
+    if (guestAccessTitle) {
+        guestAccessTitle.textContent = "Guest access";
+    }
+
+    if (guestAccessMessage) {
+        const hoursLeft = Number.isFinite(guestExpiresAt)
+            ? Math.max(
+                0,
+                Math.ceil((guestExpiresAt - now) / 3600)
+            )
+            : null;
+
+        guestAccessMessage.textContent =
+            `${guestMessagesCount} of 30 messages remaining` +
+            (
+                hoursLeft !== null
+                    ? ` · About ${hoursLeft} hour(s) left`
+                    : ""
+            );
+    }
+
+    if (messageInput && !isSendingMessage) {
+        messageInput.disabled = false;
+    }
+
+    if (sendButton && !isSendingMessage) {
+        sendButton.disabled = false;
+    }
+
+    if (uploadButton && !isUploadingFile && !isSendingMessage) {
+        uploadButton.disabled = false;
+    }
+}
+
+function consumeDisplayedGuestMessage() {
+    if (
+        !guestAccessBanner ||
+        guestAccessLimited ||
+        !Number.isFinite(guestMessagesCount)
+    ) {
+        return;
+    }
+
+    guestMessagesCount = Math.max(0, guestMessagesCount - 1);
+    updateGuestAccessDisplay();
+}
+
+function handleGuestAccessError(data) {
+    if (!guestAccessBanner) {
+        return false;
+    }
+
+    const message =
+        typeof data?.error === "string"
+            ? data.error
+            : "";
+
+    const normalizedMessage = message.toLowerCase();
+
+    const isGuestLimitError =
+        normalizedMessage.includes("guest") ||
+        normalizedMessage.includes("48-hour") ||
+        normalizedMessage.includes("48 hour") ||
+        normalizedMessage.includes("30 messages");
+
+    if (!isGuestLimitError) {
+        return false;
+    }
+
+    setGuestAccessLimited(
+        `${message} Please sign in or create an account to continue.`
+    );
+
+    return true;
 }
 
 function setNavigationOpen(isOpen) {
@@ -578,6 +758,7 @@ function openLocalResearch(researchKey) {
 
 // API RESPONSE AND ERROR HELPERS
 
+
 async function readJsonResponse(response) {
     const responseText = await response.text();
 
@@ -586,20 +767,31 @@ async function readJsonResponse(response) {
     try {
         data = JSON.parse(responseText);
     } catch {
-        throw new Error(
+        const error = new Error(
             `The server returned an unreadable response (HTTP ${response.status}).`
         );
+
+        error.status = response.status;
+        error.data = null;
+        throw error;
     }
 
     if (!data || typeof data !== "object" || Array.isArray(data)) {
-        throw new Error("The server returned an invalid response.");
+        const error = new Error("The server returned an invalid response.");
+        error.status = response.status;
+        error.data = null;
+        throw error;
     }
 
     if (!response.ok) {
-        throw new Error(
+        const error = new Error(
             data.error || data.message ||
             `The request failed (HTTP ${response.status}).`
         );
+
+        error.status = response.status;
+        error.data = data;
+        throw error;
     }
 
     return data;
@@ -980,7 +1172,7 @@ async function uploadSelectedDocuments() {
             );
 
             try {
-                const response = await fetch("/api/upload", {
+                const response = await secureFetch("/api/upload", {
                     method: "POST",
                     headers: { "Accept": "application/json" },
                     body: formData,
@@ -1035,7 +1227,7 @@ async function uploadSelectedDocuments() {
         isUploadingFile = false;
 
         if (uploadButton) {
-            uploadButton.disabled = false;
+            uploadButton.disabled = guestAccessLimited;
         }
     }
 }
@@ -1118,20 +1310,27 @@ async function sendMessage() {
             // The existing Flask /api/chat route creates a conversation
             // when conversation_id is null. Do not call a missing
             // /api/conversations endpoint before this request.
-            const response = await fetch("/api/chat", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Accept": "application/json"
-                },
-                body: JSON.stringify({
-                    message,
-                    conversation_id: currentConversationId,
-                    document_text: currentDocumentText,
-                    document_filename: currentDocumentFilename
-                }),
-                signal: controller.signal
-            });
+           
+        const response = await secureFetch("/api/chat", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            },
+            body: JSON.stringify({
+                message,
+                conversation_id: currentConversationId,
+                document_text: currentDocumentText,
+                document_filename: currentDocumentFilename
+            }),
+            signal: controller.signal
+        });
+
+            // Update the displayed allowance when the server has
+            // processed the guest message.
+            if (guestAccessBanner && response.status !== 403) {
+                consumeDisplayedGuestMessage();
+            }
 
             const data = await readJsonResponse(response);
 
@@ -1174,9 +1373,26 @@ async function sendMessage() {
                     : "FelixLawAI ready"
             );
         } finally {
+
             clearTimeout(timeoutId);
+
         }
+
     } catch (error) {
+
+        if (
+            error.status === 403 &&
+            handleGuestAccessError(error.data)
+        ) {
+            addMessage(
+                "Your guest access has ended. Please sign in or create an account to continue using Felix Legal Chatbot.",
+                "assistant error"
+            );
+
+            setStatus("Guest access ended");
+            return;
+        }
+
         console.error("FelixLawAI request failed:", error);
 
         let messageToShow;
@@ -1200,10 +1416,12 @@ async function sendMessage() {
             messageInput.value = originalInput;
             resizeTextarea();
         }
+
     } finally {
+
         hideTyping();
         isSendingMessage = false;
-        sendButton.disabled = false;
+        sendButton.disabled = guestAccessLimited;
         messageInput?.focus();
     }
 }
@@ -1715,7 +1933,7 @@ helpButton?.addEventListener("click", openHelpPanel);
 
 
 
-// RESTORE THEME AND INITIALISE THE APP
+/* RESTORE THEME AND INITIALISE THE APP */
 
 try {
     const savedSettings = JSON.parse(
@@ -1735,5 +1953,12 @@ try {
 renderAttachmentPreview();
 resizeTextarea();
 renderRecentResearch();
+
+/* Felix Legal Chatbot */
+updateGuestAccessDisplay();
+
+if (guestAccessBanner) {
+    setInterval(updateGuestAccessDisplay, 60_000);
+}
 
 console.log("FelixLawAI interface initialisation completed.");

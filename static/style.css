@@ -67,6 +67,80 @@ input:focus-visible {
     outline-offset: 3px;
 }
 
+/* Felix Legal Chatbot */
+.password-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.password-wrapper input {
+    display: block;
+    width: 100%;
+    padding-right: 44px;
+    box-sizing: border-box;
+}
+
+.password-wrapper .toggle-password {
+    position: absolute;
+    top: 50%;
+    right: 10px;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    margin: 0;
+    padding: 5px;
+    border: none;
+    border-radius: 5px;
+    background: transparent;
+    color: #8ce4b3;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.password-wrapper .toggle-password:hover {
+    background: rgba(140, 228, 179, 0.10);
+    color: #b4f5d0;
+}
+
+.password-wrapper .toggle-password svg {
+    display: block;
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.password-wrapper .toggle-password:focus-visible {
+    outline: 2px solid #8ce4b3;
+    outline-offset: 2px;
+}
+
+.forgot-password {
+    display: flex;
+    justify-content: flex-end;
+    margin: 8px 0 18px;
+}
+
+.forgot-password a {
+    color: #60a5fa;
+    font-size: 0.9rem;
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.forgot-password a:hover {
+    color: #93c5fd;
+    text-decoration: underline;
+}
+
 .app-shell {
     display: flex;
     width: 100%;
@@ -1369,5 +1443,149 @@ body.dark-preview .attachment-preview {
         animation-duration: 0.01ms !important;
         animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;
+    }
+}
+
+.guest-access-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin: 16px 24px 0;
+    padding: 14px 18px;
+    border: 1px solid #d9e5f5;
+    border-radius: 14px;
+    background: #f0f6ff;
+    color: #17365f;
+}
+
+.guest-access-information {
+    min-width: 0;
+}
+
+.guest-access-information strong {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 14px;
+}
+
+.guest-access-information p {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.guest-access-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.guest-access-actions a {
+    color: #174ea6;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.guest-access-actions a:hover {
+    text-decoration: underline;
+}
+
+.guest-access-actions .guest-register-link {
+    padding: 9px 13px;
+    border-radius: 9px;
+    background: #174ea6;
+    color: #ffffff;
+}
+
+.guest-access-actions .guest-register-link:hover {
+    background: #123d82;
+    text-decoration: none;
+}
+
+.guest-access-banner[data-guest-access-limited="true"] {
+    border-color: #f0d4a6;
+    background: #fff8eb;
+    color: #704214;
+}
+
+.guest-access-banner[data-guest-access-limited="true"] .guest-access-actions a {
+    color: #174ea6;
+}
+
+@media (max-width: 640px) {
+    .guest-access-banner {
+        align-items: flex-start;
+        flex-direction: column;
+        margin: 12px 12px 0;
+        padding: 13px;
+    }
+
+    .guest-access-actions {
+        justify-content: flex-start;
+    }
+}
+
+.guest-access-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin: 12px 24px 0;
+    padding: 14px 18px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface-soft);
+    color: var(--text-main);
+}
+
+.guest-access-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+}
+
+.guest-access-copy strong {
+    font-size: 0.92rem;
+}
+
+.guest-access-copy span {
+    font-size: 0.85rem;
+    line-height: 1.5;
+}
+
+.guest-access-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 14px;
+    flex-shrink: 0;
+}
+
+.guest-access-actions a {
+    color: var(--blue-600);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.guest-access-actions a:hover {
+    text-decoration: underline;
+}
+
+.guest-access-banner.is-limited {
+    border-color: #e8b86d;
+    background: rgba(245, 158, 11, 0.08);
+}
+
+@media (max-width: 640px) {
+    .guest-access-banner {
+        align-items: flex-start;
+        flex-direction: column;
+        margin: 10px 12px 0;
     }
 }

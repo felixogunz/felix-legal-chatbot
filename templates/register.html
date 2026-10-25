@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>Create Account | Felix Legal Chatbot">
+
+    <style>
+        /* Felix Legal Chatbot */
+        :root {
+            color-scheme: dark;
+            font-family: Inter, system-ui, sans-serif;
+            background: #0b0e0d;
+            color: #f1f5f2;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            margin: 0;
+            display: grid;
+            place-items: center;
+            padding: 24px;
+            background:
+                radial-gradient(ellipse at top, #18352c 0%, transparent 55%),
+                #0b0e0d;
+        }
+
+        .auth-card {
+            width: 100%;
+            max-width: 440px;
+            padding: 36px;
+            border: 1px solid #2c4238;
+            border-radius: 22px;
+            background: rgba(16, 24, 20, 0.96);
+            box-shadow: 0 24px 80px #0008;
+        }
+
+        .brand {
+            color: #8ce4b3;
+            font-size: 13px;
+            font-weight: 800;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        h1 {
+            margin: 18px 0 8px;
+            font-size: clamp(28px, 5vw, 36px);
+        }
+
+        .intro {
+            margin-bottom: 26px;
+            color: #a8b9ae;
+            line-height: 1.6;
+        }
+
+        label {
+            display: block;
+            margin: 18px 0 8px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        input {
+            display: block;
+            width: 100%;
+            padding: 13px 14px;
+            border: 1px solid #35493e;
+            border-radius: 10px;
+            background: #0c130f;
+            color: #fff;
+            font: inherit;
+        }
+
+        input:focus {
+            outline: 2px solid #8ce4b3;
+            outline-offset: 2px;
+        }
+
+        /* Form buttons */
+        .auth-submit {
+            display: block;
+            width: 100%;
+            margin-top: 24px;
+            padding: 14px;
+            border: 0;
+            border-radius: 10px;
+            background: #8ce4b3;
+            color: #102219;
+            font: inherit;
+            font-weight: 800;
+            cursor: pointer;
+        }
+
+        .auth-submit:hover {
+            background: #aaf0c9;
+        }
+
+        /* Password visibility control */
+        .password-wrapper {
+            position: relative;
+            width: 100%;
+        }
+
+        .password-wrapper input {
+            width: 100%;
+            padding-right: 48px;
+        }
+
+        .password-wrapper .toggle-password {
+            position: absolute;
+            top: 50%;
+            right: 10px;
+            transform: translateY(-50%);
+
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+
+            width: 30px;
+            min-width: 30px;
+            height: 30px;
+            margin: 0;
+            padding: 6px;
+
+            border: 0;
+            border-radius: 6px;
+            background: transparent;
+            color: #8ce4b3;
+
+            line-height: 1;
+            cursor: pointer;
+            appearance: none;
+            -webkit-appearance: none;
+        }
+
+        .password-wrapper .toggle-password:hover {
+            background: rgba(140, 228, 179, 0.10);
+            color: #b4f5d0;
+        }
+
+        .password-wrapper .toggle-password svg {
+            display: block;
+            width: 18px;
+            height: 18px;
+            min-width: 18px;
+            flex: 0 0 18px;
+
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 1.7;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .password-wrapper .toggle-password:focus-visible {
+            outline: 2px solid #8ce4b3;
+            outline-offset: 2px;
+        }
+
+        .error {
+            padding: 12px;
+            border: 1px solid #8e4545;
+            border-radius: 10px;
+            background: #351c1c;
+            color: #ffc3c3;
+            line-height: 1.5;
+        }
+
+        .footer {
+            margin: 22px 0 0;
+            color: #a8b9ae;
+            font-size: 14px;
+            text-align: center;
+        }
+
+        a {
+            color: #8ce4b3;
+        }
+
+        .fine-print {
+            margin-top: 18px;
+            color: #87988d;
+            font-size: 12px;
+            line-height: 1.6;
+        }
+
+        @media (max-width: 480px) {
+            .auth-card {
+                padding: 26px 22px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <main class="auth-card">
+        <div class="brand">Felix Legal Chatbot</div>
+
+        <h1>Create your account</h1>
+
+        <p class="intro">
+            Create a secure account to access your legal research
+            assistant and conversation history.
+        </p>
+
+        {% if error %}
+            <div class="error" role="alert">{{ error }}</div>
+        {% endif %}
+
+        <form method="POST" action="{{ url_for('register') }}">
+            <input
+                type="hidden"
+                name="csrf_token"
+                value="{{ csrf_token() }}"
+            >
+
+            <label for="email">Email address</label>
+            <input
+                id="email"
+                name="email"
+                type="email"
+                autocomplete="email"
+                maxlength="254"
+                required
+            >
+
+            <label for="password">Password</label>
+
+            <div class="password-wrapper">
+                <input
+                    id="password"
+                    name="password"
+                    type="password"
+                    autocomplete="new-password"
+                    minlength="12"
+                    maxlength="128"
+                    required
+                >
+
+                <button
+                    type="button"
+                    class="toggle-password"
+                    aria-label="Show password"
+                    aria-controls="password"
+                    aria-pressed="false"
+                >
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                </button>
+            </div>
+
+            <label for="confirm_password">Confirm password</label>
+
+            <div class="password-wrapper">
+                <input
+                    id="confirm_password"
+                    name="confirm_password"
+                    type="password"
+                    autocomplete="new-password"
+                    minlength="12"
+                    maxlength="128"
+                    required
+                >
+
+                <button
+                    type="button"
+                    class="toggle-password"
+                    aria-label="Show password"
+                    aria-controls="confirm_password"
+                    aria-pressed="false"
+                >
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                </button>
+            </div>
+
+            <button type="submit" class="auth-submit">
+                Create account
+            </button>
+        </form>
+
+        <p class="footer">
+            Already registered?
+            <a href="{{ url_for('login') }}">Sign in</a>
+        </p>
+
+        <p class="fine-print">
+            Use a strong, unique password. Do not enter confidential
+            information into legal research tools unless you understand
+            how the service processes and stores it.
+        </p>
+    </main>
+
+    <script
+        src="{{ url_for('static', filename='auth.js') }}"
+        defer
+    ></script>
+</body>
+</html>
