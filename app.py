@@ -5,7 +5,10 @@ import os
 import zipfile
 from pathlib import Path
 from urllib.parse import urlsplit
+from urllib.error import HTTPError
+from urllib.request import Request, urlopen
 import hashlib
+import json
 import secrets
 import smtplib
 import ssl
@@ -103,9 +106,14 @@ limiter = Limiter(
 app.config["MAX_MESSAGE_LENGTH"] = 10000
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+
 app.config["SESSION_COOKIE_SECURE"] = (
-    os.getenv("FLASK_ENV", "").lower() == "production"
-    or os.getenv("APP_ENV", "").lower() == "production"
+    os.getenv("SESSION_COOKIE_SECURE", "").strip().lower()
+    in {"1", "true", "yes", "on"}
+    or os.getenv("RENDER", "").strip().lower() == "true"
+    or bool(os.getenv("RENDER_EXTERNAL_URL", "").strip())
+    or os.getenv("FLASK_ENV", "").strip().lower() == "production"
+    or os.getenv("APP_ENV", "").strip().lower() == "production"
 )
 
 logging.basicConfig(
@@ -116,27 +124,80 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-# Felix Legal Chatbot
+
+
 def send_password_reset_email(recipient, reset_url):
-    """Send a password-reset link using Gmail SMTP."""
-    username = app.config.get("MAIL_USERNAME")
-    password = app.config.get("MAIL_PASSWORD")
-    sender = app.config.get("MAIL_DEFAULT_SENDER") or username
+    """Send a password-reset email through Resend or local SMTP."""
+    sender = (app.config.get("MAIL_DEFAULT_SENDER") or "").strip()
+    resend_api_key = (app.config.get("RESEND_API_KEY") or "").strip()
 
-    if not username or not password or not sender:
-        raise RuntimeError("Gmail SMTP settings are not configured.")
+    subject = "Reset your Felix Legal Chatbot password"
 
-    message = EmailMessage()
-    message["Subject"] = "Reset your Felix Legal Chatbot password"
-    message["From"] = sender
-    message["To"] = recipient
-
-    message.set_content(
+    text_body = (
         "We received a request to reset your Felix Legal Chatbot password.\n\n"
         f"Use this link to choose a new password:\n{reset_url}\n\n"
         "This link expires in 30 minutes and can only be used once.\n"
         "If you did not request this reset, you can ignore this email."
     )
+
+    # Use Resend when an API key is configured.
+    if resend_api_key:
+        if not sender:
+            raise RuntimeError(
+                "MAIL_DEFAULT_SENDER must be configured when using Resend."
+            )
+
+        payload = json.dumps({
+            "from": sender,
+            "to": [recipient],
+            "subject": subject,
+            "text": text_body,
+        }).encode("utf-8")
+
+        api_request = Request(
+            "https://api.resend.com/emails",
+            data=payload,
+            headers={
+                "Authorization": f"Bearer {resend_api_key}",
+                "Content-Type": "application/json",
+            },
+            method="POST",
+        )
+
+        try:
+            with urlopen(api_request, timeout=12) as response:
+                if not 200 <= response.status < 300:
+                    raise RuntimeError(
+                        f"Resend returned HTTP status {response.status}."
+                    )
+        except HTTPError as error:
+            logger.error(
+                "Resend rejected password-reset email: HTTP %s",
+                error.code,
+            )
+            raise RuntimeError(
+                f"Resend rejected the password-reset email "
+                f"(HTTP {error.code})."
+            ) from error
+
+        return
+
+    # SMTP fallback for local development.
+    username = (app.config.get("MAIL_USERNAME") or "").strip()
+    password = (app.config.get("MAIL_PASSWORD") or "").strip()
+    sender = sender or username
+
+    if not username or not password or not sender:
+        raise RuntimeError(
+            "Configure RESEND_API_KEY and MAIL_DEFAULT_SENDER, "
+            "or provide local SMTP settings."
+        )
+
+    message = EmailMessage()
+    message["Subject"] = subject
+    message["From"] = sender
+    message["To"] = recipient
+    message.set_content(text_body)
 
     with smtplib.SMTP(
         app.config["MAIL_SERVER"],
@@ -144,11 +205,14 @@ def send_password_reset_email(recipient, reset_url):
         timeout=15,
     ) as smtp:
         smtp.ehlo()
+
         if app.config.get("MAIL_USE_TLS", True):
             smtp.starttls(context=ssl.create_default_context())
-            smtp.ehlo()
+
+        smtp.ehlo()
         smtp.login(username, password)
         smtp.send_message(message)
+
 
 init_db()
 init_auth_db()
@@ -480,15 +544,6 @@ def normalise_sources(raw_sources):
     return sources
 
 
-# Authentication routes
-
-@app.context_processor
-def inject_csrf_token():
-    """Make the CSRF token available to Jinja templates."""
-    return {"csrf_token": generate_csrf}
-
-
-
 @app.route("/register", methods=["GET", "POST"])
 @limiter.limit("5 per minute")
 def register():
@@ -596,21 +651,26 @@ def login():
     )
 
 
-# Felix Legal Chatbot
+
 @app.route("/forgot-password", methods=["GET", "POST"])
 @limiter.limit("5 per minute")
 def forgot_password():
-    message = (
-        "If an account exists for that address, "
-        "a password-reset link will be sent."
-    ) if request.method == "POST" else None
+    message = None
+    error = None
 
     if request.method == "POST":
         email = request.form.get("email", "").strip().lower()
 
+        # Keep the same response for existing and nonexistent accounts.
+        message = (
+            "If an account exists for that address, "
+            "a password-reset link will be sent."
+        )
+
         if (
-            re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email)
+            email
             and len(email) <= 254
+            and re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email)
         ):
             try:
                 user = get_user_by_email(email)
@@ -640,91 +700,99 @@ def forgot_password():
 
                     send_password_reset_email(email, reset_url)
 
-            except Exception:
-                logger.exception("Password-reset request failed.")
+            except Exception as exc:
+                error_type = type(exc).__name__
+
+                app.logger.exception(
+                    "Password-reset request failed. "
+                    "Error type: %s",
+                    error_type,
+                )
+
+                if app.debug:
+                    message = None
+                    error = (
+                        f"Diagnostic: {error_type}. "
+                        f"Reason: {exc}"
+                    )
 
         return render_template(
             "forgot_password.html",
             message=message,
+            error=error,
         )
 
-    return render_template(
-        "forgot_password.html",
-        message=message,
-    )
 
 
 @app.route("/reset-password", methods=["GET", "POST"])
-@limiter.limit("10 per minute")
 def reset_password():
     token = request.args.get("token", "").strip()
 
-    if not token or len(token) > 512:
+    if not token:
         return render_template(
             "reset_password.html",
-            error="This reset link is invalid or has expired. Request a new one.",
             token="",
+            error="This password-reset link is invalid or has expired.",
         ), 400
 
-    token_hash = hashlib.sha256(
-        token.encode("utf-8")
-    ).hexdigest()
+    token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
 
-    try:
-        reset_record = get_valid_password_reset_token(
-            token_hash,
-            int(time.time()),
-        )
-    except Exception:
-        logger.exception("Could not validate password-reset token.")
+    reset_record = get_valid_password_reset_token(
+        token_hash,
+        int(time.time()),
+    )
+
+    if not reset_record:
         return render_template(
             "reset_password.html",
-            error="We could not verify this link. Please try again later.",
-            token=token,
-        ), 500
-
-    if reset_record is None:
-        return render_template(
-            "reset_password.html",
-            error="This reset link is invalid or has expired. Request a new one.",
-            token=token,
+            token="",
+            error=(
+                "This password-reset link is invalid, has expired, "
+                "or has already been used. Please request a new link."
+            ),
         ), 400
-
-    error = None
 
     if request.method == "POST":
         password = request.form.get("password", "")
         confirm_password = request.form.get("confirm_password", "")
 
-        if len(password) < 12:
-            error = "Your password must contain at least 12 characters."
-        elif len(password) > 128:
-            error = "Your password cannot exceed 128 characters."
-        elif password != confirm_password:
-            error = "Your passwords do not match."
-        else:
-            try:
-                updated = reset_password_with_token(
-                    token_hash,
-                    generate_password_hash(password),
-                    int(time.time()),
-                )
+        if not 12 <= len(password) <= 128:
+            return render_template(
+                "reset_password.html",
+                token=token,
+                error="Your new password must be between 12 and 128 characters.",
+            ), 400
 
-                if updated:
-                    return redirect(
-                        url_for("login", reset="success")
-                    )
+        if password != confirm_password:
+            return render_template(
+                "reset_password.html",
+                token=token,
+                error="The passwords do not match. Please try again.",
+            ), 400
 
-                error = "This reset link is invalid or has expired. Request a new one."
+        updated = reset_password_with_token(
+            token_hash,
+            generate_password_hash(password),
+            int(time.time()),
+        )
 
-            except Exception:
-                logger.exception("Password reset failed.")
-                error = "We could not update your password. Please try again."
+        if updated:
+            app.logger.info("Password reset completed successfully.")
+            return redirect(url_for("login", reset="success"))
+
+        return render_template(
+            "reset_password.html",
+            token="",
+            error=(
+                "This password-reset link is no longer valid. "
+                "Please request a new one."
+            ),
+        ), 400
 
     return render_template(
         "reset_password.html",
-        error=error,
         token=token,
+        error=None,
     )
 
 
@@ -935,10 +1003,15 @@ def chat():
             413,
         )
 
-    try:
-        validate_message(message)
-    except ValueError as error:
-        return json_error(str(error), 400)
+        is_valid, validation_result = validate_message(
+            message,
+            app.config["MAX_MESSAGE_LENGTH"],
+        )
+
+        if not is_valid:
+            return json_error(validation_result, 400)
+
+        message = validation_result
 
     # Felix Legal Chatbot: enforce guest message limits
     if owner_id.startswith("guest:"):

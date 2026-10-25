@@ -560,10 +560,10 @@ def generate_response(messages):
             "OpenAI request failed: exception_type=%s",
             type(exc).__name__,
         )
-        raise RuntimeError(
-            "The legal assistant could not complete the request. "
-            "Please try again shortly."
-        ) from exc
+        
+        # Preserve the original exception so the application can classify it.
+        # The Flask route should still return a safe message to the user.
+        raise
 
     status = read_value(response, "status", "")
 
