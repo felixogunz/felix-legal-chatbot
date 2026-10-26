@@ -130,7 +130,12 @@ def send_password_reset_email(recipient, reset_url):
     """Send a password-reset email through Resend or local SMTP."""
     sender = (app.config.get("MAIL_DEFAULT_SENDER") or "").strip()
     resend_api_key = (app.config.get("RESEND_API_KEY") or "").strip()
-
+    app.logger.info(
+        "Password-reset email sender configuration: "
+        "Resend API key present=%s, sender configured=%s",
+        bool(resend_api_key),
+        bool(sender),
+    )
     subject = "Reset your Felix Legal Chatbot password"
 
     text_body = (
@@ -163,22 +168,55 @@ def send_password_reset_email(recipient, reset_url):
             },
             method="POST",
         )
-
+   
         try:
             with urlopen(api_request, timeout=12) as response:
+                response_body = response.read().decode("utf-8", errors="replace")
+
                 if not 200 <= response.status < 300:
+                    app.logger.error(
+                        "Resend returned unexpected HTTP status %s.",
+                        response.status,
+                    )
                     raise RuntimeError(
                         f"Resend returned HTTP status {response.status}."
                     )
-        except HTTPError as error:
-            logger.error(
-                "Resend rejected password-reset email: HTTP %s",
-                error.code,
+
+                try:
+                    response_data = json.loads(response_body)
+                except (json.JSONDecodeError, TypeError):
+                    response_data = {}
+
+                app.logger.info(
+                    "Resend accepted password-reset email request. "
+                    "HTTP status=%s, message_id=%s",
+                    response.status,
+                    response_data.get("id", "not provided"),
+                )
+
+        except HTTPError as exc:
+            # Log the provider's response, but never log API keys or request headers.
+            try:
+                provider_body = exc.read().decode("utf-8", errors="replace")
+            except Exception:
+                provider_body = ""
+
+            app.logger.error(
+                "Resend rejected password-reset email. HTTP status=%s, "
+                "provider response=%s",
+                exc.code,
+                provider_body[:1000],
             )
+
             raise RuntimeError(
-                f"Resend rejected the password-reset email "
-                f"(HTTP {error.code})."
-            ) from error
+                f"Resend rejected the password-reset email (HTTP {exc.code})."
+            ) from exc
+
+        except Exception:
+            app.logger.exception(
+                "Unexpected error while contacting Resend."
+            )
+            raise
 
         return
 
@@ -659,23 +697,34 @@ def forgot_password():
     error = None
 
     if request.method == "POST":
+        app.logger.info("Forgot-password POST request received.")
+
         email = request.form.get("email", "").strip().lower()
 
-        # Keep the same response for existing and nonexistent accounts.
         message = (
             "If an account exists for that address, "
             "a password-reset link will be sent."
         )
 
-        if (
-            email
-            and len(email) <= 254
-            and re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email)
+        if not email or len(email) > 254 or not re.fullmatch(
+            r"[^@\s]+@[^@\s]+\.[^@\s]+", email
         ):
+            app.logger.warning(
+                "Forgot-password request rejected: invalid email format."
+            )
+        else:
             try:
                 user = get_user_by_email(email)
 
-                if user:
+                if not user:
+                    app.logger.info(
+                        "Forgot-password lookup completed: no matching account."
+                    )
+                else:
+                    app.logger.info(
+                        "Forgot-password lookup completed: account found."
+                    )
+
                     token = secrets.token_urlsafe(32)
                     token_hash = hashlib.sha256(
                         token.encode("utf-8")
@@ -698,30 +747,34 @@ def forgot_password():
                         _external=True,
                     )
 
-                    send_password_reset_email(email, reset_url)
-
-            except Exception as exc:
-                error_type = type(exc).__name__
-
-                app.logger.exception(
-                    "Password-reset request failed. "
-                    "Error type: %s",
-                    error_type,
-                )
-
-                if app.debug:
-                    message = None
-                    error = (
-                        f"Diagnostic: {error_type}. "
-                        f"Reason: {exc}"
+                    app.logger.info(
+                        "Password-reset token created; attempting email delivery."
                     )
 
-        return render_template(
-            "forgot_password.html",
-            message=message,
-            error=error,
-        )
+                    send_password_reset_email(email, reset_url)
 
+                    app.logger.info(
+                        "Password-reset email request accepted by configured sender."
+                    )
+
+            except Exception as exc:
+                app.logger.exception(
+                    "Forgot-password processing failed (%s).",
+                    type(exc).__name__,
+                )
+
+                # Keep detailed errors in server logs, not on the public page.
+                if app.debug:
+                    error = (
+                        f"Diagnostic: {type(exc).__name__}: {exc}"
+                    )
+                    message = None
+
+    return render_template(
+        "forgot_password.html",
+        message=message,
+        error=error,
+    )
 
 
 @app.route("/reset-password", methods=["GET", "POST"])

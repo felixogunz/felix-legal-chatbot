@@ -1589,3 +1589,225 @@ body.dark-preview .attachment-preview {
         margin: 10px 12px 0;
     }
 }
+
+.navigation-footer {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: auto;
+}
+
+.logout-action {
+    margin-top: 10px;
+    color: #dc5656;
+    border: 1px solid rgba(220, 86, 86, 0.2);
+    border-radius: 10px;
+}
+
+.logout-action:hover {
+    background: rgba(220, 86, 86, 0.09);
+    border-color: rgba(220, 86, 86, 0.4);
+}
+
+.profile-circle {
+    display: inline-flex;
+    width: 28px;
+    height: 28px;
+    flex: 0 0 28px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--blue-600);
+    color: #fff;
+    font-size: 0.85rem;
+    font-weight: 700;
+}
+
+.account-dialog-copy {
+    line-height: 1.65;
+    color: var(--text-muted, var(--text-main));
+}
+
+.account-dialog-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.account-dialog-actions a,
+.account-dialog-actions button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 42px;
+    padding: 10px 15px;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    color: var(--text-main);
+    background: var(--surface);
+    font: inherit;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.account-dialog-actions .account-primary {
+    background: var(--blue-600);
+    color: #fff;
+    border-color: var(--blue-600);
+}
+
+.logout-confirmation {
+    color: #dc5656;
+}
+
+.logout-confirmation:disabled {
+    opacity: 0.6;
+    cursor: wait;
+}
+
+@media (max-width: 480px) {
+    .account-dialog-actions {
+        flex-direction: column;
+    }
+
+    .account-dialog-actions a,
+    .account-dialog-actions button {
+        width: 100%;
+    }
+}
+
+
+/* Felix Legal Chatbot */
+
+.navigation-footer {
+    gap: 8px;
+    padding-top: 16px;
+}
+
+.navigation-footer .footer-action {
+    width: 100%;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 13px;
+    border: 1px solid transparent;
+    border-radius: 11px;
+    background: transparent;
+    color: var(--text-main);
+    font-size: 0.92rem;
+    font-weight: 500;
+    text-align: left;
+    cursor: pointer;
+    transition:
+        background 180ms ease,
+        border-color 180ms ease,
+        color 180ms ease,
+        transform 180ms ease;
+}
+
+.navigation-footer .footer-action:hover {
+    background: var(--surface);
+    border-color: var(--border);
+    transform: translateX(2px);
+}
+
+.navigation-footer .logout-action {
+    margin-top: 8px;
+    color: #d94b55;
+    background: rgba(217, 75, 85, 0.055);
+    border: 1px solid rgba(217, 75, 85, 0.14);
+}
+
+.navigation-footer .logout-action:hover {
+    color: #c93642;
+    background: rgba(217, 75, 85, 0.11);
+    border-color: rgba(217, 75, 85, 0.3);
+}
+
+.navigation-footer .logout-action:focus-visible,
+.navigation-footer .footer-action:focus-visible {
+    outline: 2px solid var(--blue-600);
+    outline-offset: 3px;
+}
+
+/* Profile and confirmation dialog buttons */
+
+.account-dialog-actions {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-top: 24px;
+}
+
+.account-dialog-actions a,
+.account-dialog-actions button {
+    flex: 1 1 110px;
+    min-width: 0;
+    min-height: 44px;
+    padding: 11px 16px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+    color: var(--text-main);
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+    transition:
+        background 180ms ease,
+        border-color 180ms ease,
+        color 180ms ease,
+        transform 180ms ease;
+}
+
+.account-dialog-actions a:hover,
+.account-dialog-actions button:hover {
+    border-color: var(--blue-600);
+    transform: translateY(-1px);
+}
+
+.account-dialog-actions .account-primary {
+    background: var(--blue-600);
+    color: #fff;
+    border-color: var(--blue-600);
+}
+
+.account-dialog-actions .account-primary:hover {
+    filter: brightness(1.08);
+}
+
+.account-dialog-actions .logout-confirmation {
+    background: #c93642;
+    border-color: #c93642;
+    color: #fff;
+}
+
+.account-dialog-actions .logout-confirmation:hover {
+    background: #b52c37;
+    border-color: #b52c37;
+}
+
+.account-dialog-actions button:disabled {
+    opacity: 0.6;
+    cursor: wait;
+    transform: none;
+}
+
+@media (max-width: 380px) {
+    .account-dialog-actions {
+        gap: 10px;
+    }
+
+    .account-dialog-actions a,
+    .account-dialog-actions button {
+        flex-basis: 100%;
+        width: 100%;
+    }
+}

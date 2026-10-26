@@ -36,7 +36,7 @@
     ></script>
 </head>
 
-<body>
+<body data-authenticated="{{ 'true' if session.get('user_id') else 'false' }}">
     <div class="app-shell">
 
         <!-- LEFT NAVIGATION -->
@@ -132,12 +132,9 @@
                 </div>
             </div>
 
+           
             <div class="navigation-footer">
-                <button
-                    class="footer-action"
-                    id="settingsButton"
-                    type="button"
-                >
+                <button class="footer-action" id="settingsButton" type="button">
                     <span aria-hidden="true">⚙</span>
                     <span>Settings</span>
                 </button>
@@ -146,9 +143,22 @@
                     class="footer-action"
                     id="profileButton"
                     type="button"
+                    aria-haspopup="dialog"
+                    aria-controls="profileDialog"
                 >
                     <span aria-hidden="true">F</span>
-                    <span>Felix</span>
+                    <span>Profile</span>
+                </button>
+
+                <button
+                    class="footer-action logout-action"
+                    id="logoutButton"
+                    type="button"
+                    aria-haspopup="dialog"
+                    aria-controls="logoutDialog"
+                >
+                    <span aria-hidden="true">↪</span>
+                    <span>Log out</span>
                 </button>
             </div>
 

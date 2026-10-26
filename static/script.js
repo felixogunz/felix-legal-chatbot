@@ -15,6 +15,8 @@ const workspaceStatus = document.getElementById("workspaceStatus");
 const conversationTitle = document.getElementById("conversationTitle");
 const settingsButton = document.getElementById("settingsButton");
 const themeButton = document.getElementById("themeButton");
+const profileButton = document.getElementById("profileButton");
+const logoutButton = document.getElementById("logoutButton");
 const helpButton = document.getElementById("helpButton");
 const guestAccessBanner = document.getElementById("guestAccessBanner");
 const guestAccessTitle = document.getElementById("guestAccessTitle");
@@ -1786,6 +1788,282 @@ function openSettings() {
 
 settingsButton?.addEventListener("click", openSettings);
 
+function openAccountDialog({
+    id,
+    titleText,
+    descriptionText,
+    actions,
+    returnFocus
+}) {
+    if (document.getElementById(id)) {
+        return;
+    }
+
+    const overlay = document.createElement("div");
+    overlay.id = id;
+    overlay.className = "settings-overlay";
+
+    const dialog = document.createElement("section");
+    dialog.className = "settings-dialog";
+    dialog.setAttribute("role", "dialog");
+    dialog.setAttribute("aria-modal", "true");
+    dialog.setAttribute("aria-labelledby", `${id}Title`);
+
+    const title = document.createElement("h2");
+    title.id = `${id}Title`;
+    title.textContent = titleText;
+
+    const description = document.createElement("p");
+    description.className = "account-dialog-copy";
+    description.textContent = descriptionText;
+
+    const actionContainer = document.createElement("div");
+    actionContainer.className = "account-dialog-actions";
+
+    const closeButton = document.createElement("button");
+    closeButton.type = "button";
+    closeButton.textContent = "Close";
+
+    function closeDialog() {
+        overlay.remove();
+        document.removeEventListener("keydown", handleEscape);
+        returnFocus?.focus();
+    }
+
+    function handleEscape(event) {
+        if (event.key === "Escape") {
+            closeDialog();
+        }
+    }
+
+    actions.forEach(item => {
+        const element = document.createElement(
+            item.href ? "a" : "button"
+        );
+
+        element.textContent = item.label;
+
+        if (item.href) {
+            element.href = item.href;
+        } else {
+            element.type = "button";
+        }
+
+        if (item.primary) {
+            element.className = "account-primary";
+        }
+
+        if (item.onClick) {
+            element.addEventListener("click", item.onClick);
+        }
+
+        actionContainer.appendChild(element);
+    });
+
+
+    closeButton.addEventListener("click", closeDialog);
+
+    overlay.addEventListener("click", event => {
+        if (event.target === overlay) {
+            closeDialog();
+        }
+    });
+
+    // Keep all dialog actions on the same row.
+    actionContainer.appendChild(closeButton);
+
+    dialog.append(
+        title,
+        description,
+        actionContainer
+    );
+
+
+    overlay.appendChild(dialog);
+    document.body.appendChild(overlay);
+
+    document.addEventListener("keydown", handleEscape);
+    closeButton.focus();
+}
+
+
+// PROFILE PANEL
+
+function openProfilePanel() {
+    const isAuthenticated =
+        document.body.dataset.authenticated === "true";
+
+    const actions = isAuthenticated
+        ? [
+            {
+                label: "Log out",
+                primary: true,
+                onClick: () => {
+                    document.getElementById("profileDialog")?.remove();
+                    openLogoutConfirmation();
+                }
+            }
+        ]
+        : [
+            {
+                label: "Sign in",
+                href: "/login",
+                primary: true
+            },
+            {
+                label: "Create account",
+                href: "/register"
+            }
+        ];
+
+    openAccountDialog({
+        id: "profileDialog",
+        titleText: "Your Profile",
+        descriptionText: isAuthenticated
+            ? "You are signed in to Felix Legal Chatbot. You can sign out securely whenever you finish."
+            : "You are currently using Felix Legal Chatbot as a guest. Sign in to your account or create one to access your account.",
+        actions,
+        returnFocus: profileButton
+    });
+}
+
+profileButton?.addEventListener("click", openProfilePanel);
+
+
+// LOGOUT CONFIRMATION
+
+function openLogoutConfirmation() {
+    if (document.getElementById("logoutDialog")) {
+        return;
+    }
+
+    const overlay = document.createElement("div");
+    overlay.id = "logoutDialog";
+    overlay.className = "settings-overlay";
+
+    const dialog = document.createElement("section");
+    dialog.className = "settings-dialog";
+    dialog.setAttribute("role", "alertdialog");
+    dialog.setAttribute("aria-modal", "true");
+    dialog.setAttribute("aria-labelledby", "logoutDialogTitle");
+    dialog.setAttribute("aria-describedby", "logoutDialogDescription");
+
+    const title = document.createElement("h2");
+    title.id = "logoutDialogTitle";
+    title.textContent = "Log out?";
+
+    const description = document.createElement("p");
+    description.id = "logoutDialogDescription";
+    description.className = "account-dialog-copy";
+    description.textContent = "Are you sure you want to log out?";
+
+    const errorMessage = document.createElement("p");
+    errorMessage.setAttribute("role", "alert");
+    errorMessage.hidden = true;
+
+    const actions = document.createElement("div");
+    actions.className = "account-dialog-actions";
+
+    const cancelButton = document.createElement("button");
+    cancelButton.type = "button";
+    cancelButton.textContent = "Cancel";
+
+    const confirmButton = document.createElement("button");
+    confirmButton.type = "button";
+    confirmButton.className = "account-primary logout-confirmation";
+    confirmButton.textContent = "Yes, log out";
+
+    let isLoggingOut = false;
+
+    function closeDialog() {
+        if (isLoggingOut) {
+            return;
+        }
+
+        overlay.remove();
+        document.removeEventListener("keydown", handleEscape);
+        logoutButton?.focus();
+    }
+
+    function handleEscape(event) {
+        if (event.key === "Escape") {
+            closeDialog();
+        }
+    }
+
+    cancelButton.addEventListener("click", closeDialog);
+
+    overlay.addEventListener("click", event => {
+        if (event.target === overlay) {
+            closeDialog();
+        }
+    });
+
+    confirmButton.addEventListener("click", async () => {
+        if (isLoggingOut) {
+            return;
+        }
+
+        isLoggingOut = true;
+        confirmButton.disabled = true;
+        cancelButton.disabled = true;
+        confirmButton.textContent = "Logging out...";
+
+        errorMessage.hidden = true;
+        errorMessage.textContent = "";
+
+        try {
+            const response = await secureFetch("/logout", {
+                method: "POST",
+                headers: {
+                    "Accept": "text/html"
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(
+                    response.status === 400
+                        ? "Your security token may have expired. Refresh the page and try again."
+                        : `Logout failed (HTTP ${response.status}). Please try again.`
+                );
+            }
+
+            // Flask redirects successful logout requests to /login.
+            // Fetch follows that redirect, so use its final URL.
+            window.location.assign(response.url || "/login");
+        } catch (error) {
+            console.error("Logout failed:", error);
+
+            isLoggingOut = false;
+            confirmButton.disabled = false;
+            cancelButton.disabled = false;
+            confirmButton.textContent = "Yes, log out";
+
+            errorMessage.textContent =
+                error.message ||
+                "Could not log you out. Please check your connection and try again.";
+
+            errorMessage.hidden = false;
+        }
+    });
+
+    actions.append(cancelButton, confirmButton);
+
+    dialog.append(
+        title,
+        description,
+        errorMessage,
+        actions
+    );
+
+    overlay.appendChild(dialog);
+    document.body.appendChild(overlay);
+
+    document.addEventListener("keydown", handleEscape);
+    cancelButton.focus();
+}
+
+logoutButton?.addEventListener("click", openLogoutConfirmation);
 
 // THEME TOGGLE
 
