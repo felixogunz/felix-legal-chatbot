@@ -280,30 +280,17 @@ def init_db():
             """,
         )
 
-def init_auth_db():
-    """Create authentication and password-reset tables."""
 
-    from config import Config
+def init_auth_db():
+    """Initialize authentication and password-reset tables."""
 
     connection = get_connection()
 
     try:
-        if Config.DATABASE_URL:
-            # Users table for PostgreSQL
-            execute_query(
-                connection,
-                """
-                CREATE TABLE IF NOT EXISTS users (
-                    id BIGSERIAL PRIMARY KEY,
-                    email TEXT NOT NULL UNIQUE,
-                    password_hash TEXT NOT NULL,
-                    created_at TIMESTAMPTZ NOT NULL
-                        DEFAULT CURRENT_TIMESTAMP
-                )
-                """,
-            )
+        if using_postgres():
+            # The existing PostgreSQL users table is managed separately.
+            # Do not create or alter its schema here.
 
-            # Password-reset tokens for PostgreSQL
             execute_query(
                 connection,
                 """
@@ -317,9 +304,8 @@ def init_auth_db():
                 )
                 """,
             )
-
         else:
-            # Users table for SQLite
+            # SQLite users table
             execute_query(
                 connection,
                 """
@@ -333,7 +319,7 @@ def init_auth_db():
                 """,
             )
 
-            # Password-reset tokens for SQLite
+            # SQLite password-reset tokens
             execute_query(
                 connection,
                 """
@@ -348,7 +334,6 @@ def init_auth_db():
                 """,
             )
 
-        
         # Guest access sessions
         execute_query(
             connection,
@@ -373,15 +358,12 @@ def init_auth_db():
 
         connection.commit()
 
-
     except Exception:
         connection.rollback()
         raise
 
     finally:
         connection.close()
-
-
 
 def _normalise_email(email):
     """Validate and normalise an email address for database operations."""
@@ -402,8 +384,17 @@ def _normalise_email(email):
     return email
 
 
-def create_user(email, password_hash):
+
+def create_user(full_name, email, password_hash):
     """Create a user and return their database ID."""
+
+    full_name = full_name.strip() if isinstance(full_name, str) else ""
+
+    if not full_name:
+        raise ValueError("A valid full name is required.")
+
+    if len(full_name) > 150:
+        raise ValueError("Full name cannot exceed 150 characters.")
 
     email = _normalise_email(email)
 
@@ -411,15 +402,37 @@ def create_user(email, password_hash):
         raise ValueError("A valid password hash is required.")
 
     with _database_connection(write=True) as connection:
-        cursor = execute_query(
-            connection,
-            """
-            INSERT INTO users (email, password_hash)
-            VALUES (?, ?)
-            RETURNING id
-            """,
-            (email, password_hash),
-        )
+        if using_postgres():
+            cursor = execute_query(
+                connection,
+                """
+                INSERT INTO users (
+                    full_name,
+                    email,
+                    hashed_password,
+                    is_active,
+                    created_at,
+                    updated_at
+                )
+                VALUES (
+                    ?, ?, ?, TRUE,
+                    CURRENT_TIMESTAMP,
+                    CURRENT_TIMESTAMP
+                )
+                RETURNING id
+                """,
+                (full_name, email, password_hash),
+            )
+        else:
+            cursor = execute_query(
+                connection,
+                """
+                INSERT INTO users (email, password_hash)
+                VALUES (?, ?)
+                RETURNING id
+                """,
+                (email, password_hash),
+            )
 
         row = cursor.fetchone()
 
@@ -429,27 +442,42 @@ def create_user(email, password_hash):
         return row["id"] if isinstance(row, dict) else row[0]
 
 
+
 def get_user_by_email(email):
     """Find a user by their normalised email address."""
 
     email = _normalise_email(email)
 
     with _database_connection() as connection:
-        cursor = execute_query(
-            connection,
-            """
-            SELECT id, email, password_hash
-            FROM users
-            WHERE LOWER(email) = ?
-            LIMIT 1
-            """,
-            (email,),
-        )
+        if using_postgres():
+            cursor = execute_query(
+                connection,
+                """
+                SELECT
+                    id,
+                    email,
+                    hashed_password AS password_hash
+                FROM users
+                WHERE LOWER(email) = ?
+                LIMIT 1
+                """,
+                (email,),
+            )
+        else:
+            cursor = execute_query(
+                connection,
+                """
+                SELECT id, email, password_hash
+                FROM users
+                WHERE LOWER(email) = ?
+                LIMIT 1
+                """,
+                (email,),
+            )
 
         row = cursor.fetchone()
 
         return dict(row) if row else None
-
 
 def get_user_by_id(user_id):
     """Find a user by ID without exposing their password hash."""
@@ -598,16 +626,30 @@ def reset_password_with_token(token_hash, password_hash, now):
             connection.rollback()
             return False
 
+
         # Update the account's password hash.
-        cursor = execute_query(
-            connection,
-            """
-            UPDATE users
-            SET password_hash = ?
-            WHERE id = ?
-            """,
-            (password_hash, user_id),
-        )
+        if using_postgres():
+            cursor = execute_query(
+                connection,
+                """
+                UPDATE users
+                SET hashed_password = ?,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+                """,
+                (password_hash, user_id),
+            )
+        else:
+            cursor = execute_query(
+                connection,
+                """
+                UPDATE users
+                SET password_hash = ?
+                WHERE id = ?
+                """,
+                (password_hash, user_id),
+            )
+
 
         if cursor.rowcount != 1:
             raise RuntimeError(

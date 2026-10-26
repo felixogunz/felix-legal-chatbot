@@ -593,11 +593,20 @@ def register():
     error = None
 
     if request.method == "POST":
+        full_name = request.form.get("full_name", "").strip()
         email = request.form.get("email", "").strip().lower()
         password = request.form.get("password", "")
         confirm_password = request.form.get("confirm_password", "")
 
-        if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email):
+        if not full_name:
+            error = "Enter your full name."
+
+        elif len(full_name) > 150:
+            error = "Your full name cannot exceed 150 characters."
+
+        elif not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email):
+
+
             error = "Enter a valid email address."
 
         elif len(email) > 254:
@@ -620,7 +629,7 @@ def register():
                     error = "An account with this email already exists."
                 else:
                     password_hash = generate_password_hash(password)
-                    user_id = create_user(email, password_hash)
+                    user_id = create_user(full_name, email, password_hash)
 
                     session.clear()
                     session["user_id"] = str(user_id)
