@@ -127,130 +127,53 @@ logger = logging.getLogger(__name__)
 
 
 def send_password_reset_email(recipient, reset_url):
-    """Send a password-reset email through Resend or local SMTP."""
+    """Send password-reset email through Brevo's transactional email API."""
+    api_key = os.getenv("BREVO_API_KEY", "").strip()
     sender = (app.config.get("MAIL_DEFAULT_SENDER") or "").strip()
-    resend_api_key = (app.config.get("RESEND_API_KEY") or "").strip()
-    app.logger.info(
-        "Password-reset email sender configuration: "
-        "Resend API key present=%s, sender configured=%s",
-        bool(resend_api_key),
-        bool(sender),
+
+    if not api_key:
+        raise RuntimeError("BREVO_API_KEY is not configured.")
+    if not sender:
+        raise RuntimeError("MAIL_DEFAULT_SENDER is not configured.")
+
+    payload = {
+        "sender": {
+            "name": "Felix Legal Chatbot",
+            "email": sender,
+        },
+        "to": [{"email": recipient}],
+        "subject": "Reset your Felix Legal Chatbot password",
+        "textContent": (
+            "We received a request to reset your Felix Legal Chatbot password.\n\n"
+            f"Use this link to choose a new password:\n{reset_url}\n\n"
+            "This link expires in 30 minutes and can only be used once.\n"
+            "If you did not request this reset, you can ignore this email."
+        ),
+    }
+
+    api_request = Request(
+        "https://api.brevo.com/v3/smtp/email",
+        data=json.dumps(payload).encode("utf-8"),
+        headers={
+            "accept": "application/json",
+            "api-key": api_key,
+            "content-type": "application/json",
+        },
+        method="POST",
     )
-    subject = "Reset your Felix Legal Chatbot password"
 
-    text_body = (
-        "We received a request to reset your Felix Legal Chatbot password.\n\n"
-        f"Use this link to choose a new password:\n{reset_url}\n\n"
-        "This link expires in 30 minutes and can only be used once.\n"
-        "If you did not request this reset, you can ignore this email."
-    )
-
-    # Use Resend when an API key is configured.
-    if resend_api_key:
-        if not sender:
-            raise RuntimeError(
-                "MAIL_DEFAULT_SENDER must be configured when using Resend."
-            )
-
-        payload = json.dumps({
-            "from": sender,
-            "to": [recipient],
-            "subject": subject,
-            "text": text_body,
-        }).encode("utf-8")
-
-        api_request = Request(
-            "https://api.resend.com/emails",
-            data=payload,
-            headers={
-                "Authorization": f"Bearer {resend_api_key}",
-                "Content-Type": "application/json",
-            },
-            method="POST",
-        )
-   
-        try:
-            with urlopen(api_request, timeout=12) as response:
-                response_body = response.read().decode("utf-8", errors="replace")
-
-                if not 200 <= response.status < 300:
-                    app.logger.error(
-                        "Resend returned unexpected HTTP status %s.",
-                        response.status,
-                    )
-                    raise RuntimeError(
-                        f"Resend returned HTTP status {response.status}."
-                    )
-
-                try:
-                    response_data = json.loads(response_body)
-                except (json.JSONDecodeError, TypeError):
-                    response_data = {}
-
-                app.logger.info(
-                    "Resend accepted password-reset email request. "
-                    "HTTP status=%s, message_id=%s",
-                    response.status,
-                    response_data.get("id", "not provided"),
+    try:
+        with urlopen(api_request, timeout=15) as response:
+            if response.status not in (200, 201, 202):
+                raise RuntimeError(
+                    f"Brevo returned unexpected HTTP status {response.status}."
                 )
-
-        except HTTPError as exc:
-            # Log the provider's response, but never log API keys or request headers.
-            try:
-                provider_body = exc.read().decode("utf-8", errors="replace")
-            except Exception:
-                provider_body = ""
-
-            app.logger.error(
-                "Resend rejected password-reset email. HTTP status=%s, "
-                "provider response=%s",
-                exc.code,
-                provider_body[:1000],
-            )
-
-            raise RuntimeError(
-                f"Resend rejected the password-reset email (HTTP {exc.code})."
-            ) from exc
-
-        except Exception:
-            app.logger.exception(
-                "Unexpected error while contacting Resend."
-            )
-            raise
-
-        return
-
-    # SMTP fallback for local development.
-    username = (app.config.get("MAIL_USERNAME") or "").strip()
-    password = (app.config.get("MAIL_PASSWORD") or "").strip()
-    sender = sender or username
-
-    if not username or not password or not sender:
+            logger.info("Brevo accepted a password-reset email request.")
+    except HTTPError as error:
+        logger.error("Brevo rejected password-reset email: HTTP %s", error.code)
         raise RuntimeError(
-            "Configure RESEND_API_KEY and MAIL_DEFAULT_SENDER, "
-            "or provide local SMTP settings."
-        )
-
-    message = EmailMessage()
-    message["Subject"] = subject
-    message["From"] = sender
-    message["To"] = recipient
-    message.set_content(text_body)
-
-    with smtplib.SMTP(
-        app.config["MAIL_SERVER"],
-        app.config["MAIL_PORT"],
-        timeout=15,
-    ) as smtp:
-        smtp.ehlo()
-
-        if app.config.get("MAIL_USE_TLS", True):
-            smtp.starttls(context=ssl.create_default_context())
-
-        smtp.ehlo()
-        smtp.login(username, password)
-        smtp.send_message(message)
-
+            f"Brevo rejected the password-reset email (HTTP {error.code})."
+        ) from error
 
 init_db()
 init_auth_db()
